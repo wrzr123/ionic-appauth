@@ -37,6 +37,7 @@ export interface IAuthService {
   signIn(authExtras?: StringMap, state?: string): void;
   signOut(state?: string, revokeTokens?: boolean): void;
   refreshToken(): void;
+  tokenWithClientCredentials(): void;
   loadUserInfo(): void;
   authorizationCallback(callbackUrl: string): void;
   endSessionCallback(): void;
@@ -181,6 +182,14 @@ export class AuthService implements IAuthService {
       case AuthActions.LoadUserInfoFailed:
         this._userSubject.next(undefined);
         break;
+      case AuthActions.TokenWithClientCredentialsSuccess:
+        this._tokenSubject.next(action.tokenResponse);
+        this._authenticatedSubject.next(true);
+        break;
+      case AuthActions.TokenWithClientCredentialsFailed:
+        this._tokenSubject.next(undefined);
+        this._authenticatedSubject.next(false);
+        break;
     }
 
     this._authSubjectV2.next(action);
@@ -280,6 +289,11 @@ export class AuthService implements IAuthService {
       throw new Error('No Token Defined!');
     }
 
+    if (!this._tokenSubject.value.refreshToken) {
+      this.requestTokenWithClientCredentials().then();
+      return;
+    }
+
     let requestJSON: TokenRequestJson = {
       grant_type: GRANT_TYPE_REFRESH_TOKEN,
       refresh_token: this._tokenSubject.value?.refreshToken,
@@ -290,6 +304,22 @@ export class AuthService implements IAuthService {
     let token: TokenResponse = await this.tokenHandler.performTokenRequest(await this.configuration, new TokenRequest(requestJSON));
     await this.storage.setItem(TOKEN_RESPONSE_KEY, JSON.stringify(token.toJson()));
     this.notifyActionListers(AuthActionBuilder.RefreshSuccess(token));
+  }
+
+  protected async requestTokenWithClientCredentials() {
+    const requestJson: TokenRequestJson = {
+      grant_type: "client_credentials",
+      client_id: this.authConfig.client_credentials.client_id,
+      redirect_uri: undefined,
+      extras: {
+        client_secret: this.authConfig.client_credentials.client_secret,
+        scope: this.authConfig.client_credentials.scopes
+      }
+    };
+
+    const token: TokenResponse = await this.tokenHandler.performTokenRequest(await this.configuration, new TokenRequest(requestJson));
+    await this.storage.setItem(TOKEN_RESPONSE_KEY, JSON.stringify(token.toJson()));
+    this.notifyActionListers(AuthActionBuilder.TokenWithClientCredentialsSuccess(token));
   }
 
   protected async internalLoadTokenFromStorage() {
@@ -375,6 +405,13 @@ export class AuthService implements IAuthService {
     await this.requestTokenRefresh().catch((response) => {
       this.storage.removeItem(TOKEN_RESPONSE_KEY);
       this.notifyActionListers(AuthActionBuilder.RefreshFailed(response));
+    });
+  }
+
+  public async tokenWithClientCredentials() {
+    await this.requestTokenWithClientCredentials().catch((response) => {
+      this.storage.removeItem(TOKEN_RESPONSE_KEY);
+      this.notifyActionListers(AuthActionBuilder.TokenWithClientCredentialsFailed(response));
     });
   }
 

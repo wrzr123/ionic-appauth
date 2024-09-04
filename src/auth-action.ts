@@ -14,6 +14,8 @@ export enum AuthActions {
   LoadUserInfoFailed = 'Load User Info Failed',
   RevokeTokensSuccess = 'Revoke Tokens Success',
   RevokeTokensFailed = 'Revoke Tokens Failed',
+  TokenWithClientCredentialsSuccess = 'Retrieving Access Token with Client Credentials Success',
+  TokenWithClientCredentialsFailed = 'Retrieving Access Token with Client Credentials Failed'
 }
 
 export interface IAuthAction {
@@ -109,6 +111,20 @@ export class AuthActionBuilder {
   public static LoadUserInfoFailed(error: any): IAuthAction {
     return {
       action: AuthActions.LoadUserInfoFailed,
+      error: error.message,
+    };
+  }
+
+  public static TokenWithClientCredentialsSuccess(tokenResponse: TokenResponse): IAuthAction {
+    return {
+      action: AuthActions.TokenWithClientCredentialsSuccess,
+      tokenResponse,
+    };
+  }
+
+  public static TokenWithClientCredentialsFailed(error: any): IAuthAction {
+    return {
+      action: AuthActions.TokenWithClientCredentialsFailed,
       error: error.message,
     };
   }

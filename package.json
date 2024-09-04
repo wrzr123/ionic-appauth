@@ -1,5 +1,5 @@
 {
-  "name": "ionic-appauth",
+  "name": "ionic-appauth-custom",
   "version": "2.1.0",
   "description": "Integration for OpenId/AppAuth-JS into Ionic",
   "main": "lib/index.js",
